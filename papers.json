@@ -1,0 +1,44 @@
+[
+  {
+    "title": "PoisonedRAG: Knowledge Poisoning Attacks to Retrieval-Augmented Generation",
+    "authors": ["Zou", "Geng", "Wang", "Jia"],
+    "year": 2024,
+    "citations": 320,
+    "tags": ["RAG", "security", "attack"]
+  },
+  {
+    "title": "Lost in the Middle: How Language Models Use Long Contexts",
+    "authors": ["Liu", "Lin", "Hewitt", "Paranjape"],
+    "year": 2023,
+    "citations": 2100,
+    "tags": ["LLM", "long-context"]
+  },
+  {
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "authors": ["Lewis", "Perez", "Piktus", "Petroni"],
+    "year": 2020,
+    "citations": 5600,
+    "tags": ["RAG", "foundation"]
+  },
+  {
+    "title": "Benchmarking Robustness of RAG against Noisy and Adversarial Documents",
+    "authors": ["Chen", "Zhang", "Li"],
+    "year": 2025,
+    "citations": 45,
+    "tags": ["RAG", "robustness", "benchmark"]
+  },
+  {
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "authors": ["Karpukhin", "Oguz", "Min", "Lewis"],
+    "year": 2020,
+    "citations": 4300,
+    "tags": ["retrieval", "embedding"]
+  },
+  {
+    "title": "A Survey on Security and Privacy of Retrieval-Augmented Generation",
+    "authors": ["Wang", "Xu", "Zhao"],
+    "year": 2025,
+    "citations": 88,
+    "tags": ["RAG", "security", "survey"]
+  }
+]
