@@ -1,0 +1,49 @@
+"""用真实数据把 utils.py 的每个函数跑一遍，看输出对不对。
+
+用法（在 arxiv-tool 目录下）：
+    ./.venv/Scripts/python.exe check_utils.py
+
+这只是个排查脚本，不是正式测试框架。W3 会讲 try/except，到时候可以升级。
+"""
+from pathlib import Path
+import tempfile
+
+import utils
+
+papers = utils.load_papers(str(Path(__file__).parent / "papers.json"))
+
+
+def show(label, fn):
+    """跑一个用例，出错就打印异常类型——不要自己 try 掉，报错本身就是信息。"""
+    try:
+        print(f"{label} -> {fn()!r}")
+    except Exception as e:
+        print(f"{label} -> RAISED {type(e).__name__}: {e}")
+
+
+def make_bad_file(content: str) -> str:
+    """在系统临时目录现造一个文件，返回路径。
+
+    测试夹具不进仓库：每次跑脚本时生成，跑完由系统回收临时目录。
+    """
+    path = Path(tempfile.gettempdir()) / "check_bad.json"
+    path.write_text(content, encoding="utf-8")
+    return str(path)
+
+
+show("1  normalize 多空格", lambda: utils.normalize_title("  Lost in  the   Middle "))
+show("1b normalize 含 tab", lambda: utils.normalize_title("Lost\tin the Middle"))
+show("2  shorten 边界", lambda: (utils.shorten_title("a" * 40, 10), len(utils.shorten_title("a" * 40, 10))))
+show("3  title_contains('rag')", lambda: utils.title_contains(papers, "rag"))
+show("3b title_contains 开头匹配", lambda: utils.title_contains([{"title": "RAG 系统"}], "RAG"))
+show("4  initials 正常", lambda: utils.author_initials("Andrew Lewis"))
+show("4b initials 双空格", lambda: utils.author_initials("Andrew  Lewis"))
+show("4c initials 只有名", lambda: utils.author_initials("Lewis"))
+show("5  citations_by_tag", lambda: utils.citations_by_tag(papers))
+show("6  find_paper 全小写", lambda: (utils.find_paper(papers, "lost in the middle") or {}).get("title"))
+show("6b find_paper 空串", lambda: (utils.find_paper(papers, "") or {}).get("title"))
+show("7  year_range", lambda: utils.year_range(papers))
+show("7b year_range 空列表", lambda: utils.year_range([]))
+show("8  safe 文件不存在", lambda: utils.load_papers_safe("nope.json"))
+show("8b safe JSON 坏掉", lambda: utils.load_papers_safe(make_bad_file('{"title": "坏掉的",,}')))
+show("8c safe 空文件", lambda: utils.load_papers_safe(make_bad_file("")))
