@@ -1,7 +1,7 @@
 import json
 
 def load_papers(path: str) -> list:
-    with open(path, encoding='utf-8') as f:
+    with open(path, encoding='utf-8-sig') as f:
         return json.load(f)
 
 def count_papers(papers: list) -> int:
