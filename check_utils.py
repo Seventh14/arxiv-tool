@@ -30,6 +30,16 @@ def make_bad_file(content: str) -> str:
     path.write_text(content, encoding="utf-8")
     return str(path)
 
+def check_save_keeps_input():
+    # ① 准备：最小数据。5 个字段一个不能少，
+    # 因为 save_papers_csv 的 fieldnames 写死了这 5 列
+    p = [{"title": "T", "authors": ["A", "B"], "year": 2020,
+          "citations": 1, "tags": ["RAG"]}]
+    # ② 动作：写到临时目录（和你 make_bad_file 一个思路，别写进仓库）
+    path = Path(tempfile.gettempdir()) / "check_out.csv"
+    utils.save_papers_csv(p, str(path))
+    # ③ 判据：入参还是不是原来的形状
+    return type(p[0]["tags"]).__name__, p[0]["tags"]
 
 show("1  normalize 多空格", lambda: utils.normalize_title("  Lost in  the   Middle "))
 show("1b normalize 含 tab", lambda: utils.normalize_title("Lost\tin the Middle"))
@@ -47,3 +57,4 @@ show("7b year_range 空列表", lambda: utils.year_range([]))
 show("8  safe 文件不存在", lambda: utils.load_papers_safe("nope.json"))
 show("8b safe JSON 坏掉", lambda: utils.load_papers_safe(make_bad_file('{"title": "坏掉的",,}')))
 show("8c safe 空文件", lambda: utils.load_papers_safe(make_bad_file("")))
+show("9  save 不改入参", check_save_keeps_input)

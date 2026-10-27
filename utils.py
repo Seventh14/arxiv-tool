@@ -1,4 +1,26 @@
 import json
+import csv
+
+def load_csv(path: str) -> list:
+    with open(path, encoding="utf-8", newline="") as f:
+        back = list(csv.DictReader(f))
+    for row in back:
+        row["citations"] = int(row["citations"])    # 字符串->整型
+        row["year"] = int(row["year"])              # 字符串->整型
+        row["tags"] = row["tags"].split("|")        # 字符串->列表
+    return back
+
+
+def save_papers_csv(papers: list, path: str) -> None:
+    # newline=""：Windows 上防止 csv 多写空行
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["title", "authors", "year", "citations", "tags"])
+        w.writeheader()
+        for paper in papers:
+            row = dict(paper)
+            row["authors"] = "|".join(paper["authors"])
+            row["tags"] = "|".join(paper["tags"])
+            w.writerow(row)
 
 def load_papers(path: str) -> list:
     with open(path, encoding='utf-8-sig') as f:
