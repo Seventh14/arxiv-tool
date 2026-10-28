@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 *.csv
+
+# 抓取产物：可以随时重现，不进版本库
+feed.xml
+rag.json
+arxiv_papers.json
