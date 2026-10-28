@@ -1,8 +1,15 @@
 import json
 import csv
 
+
 def load_csv(path: str) -> list:
-    with open(path, encoding="utf-8", newline="") as f:
+    """读 CSV，并把三列还原成程序内部的类型。
+
+    citations / year 转 int，tags 按 "|" 切回列表。
+    用 utf-8-sig 读：记事本或 Excel 保存过的 CSV 带 BOM，
+    用 utf-8 读会让第一个列名变成 "\ufefftitle"，后面按列名取值全部 KeyError。
+    """
+    with open(path, encoding="utf-8-sig", newline="") as f:
         back = list(csv.DictReader(f))
     for row in back:
         row["citations"] = int(row["citations"])    # 字符串->整型
@@ -12,6 +19,11 @@ def load_csv(path: str) -> list:
 
 
 def save_papers_csv(papers: list, path: str) -> None:
+    """把论文列表写成 CSV（有副作用：覆盖写 path）。
+
+    authors 和 tags 各自用 "|" 连接成一列；写出的是无 BOM 的 UTF-8。
+    不修改传入的 papers——循环里先 dict(paper) 复制一份再改副本。
+    """
     # newline=""：Windows 上防止 csv 多写空行
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["title", "authors", "year", "citations", "tags"])
@@ -36,9 +48,18 @@ def sort_by_citations(papers: list, top_n: int) -> list:
     return top_papers(papers, top_n)
 
 def filter_by_tag(papers: list, tag: str) -> list:
+    """按标签**精确**匹配：整个标签相等才算，不做子串匹配。
+
+    和 title_contains 的区别：这里 "RAG" 不会命中 "rag-security" 这种标签。
+    """
     return [p for p in papers if tag in p["tags"]]
 
 def average_citations(papers: list) -> float:
+    """所有论文引用的平均值。
+
+    papers 为空时抛 ZeroDivisionError——这是故意的：空列表求平均是调用方的错，
+    不要加守卫返回 0.0，那会把 bug 变成静默的错答案。
+    """
     total = 0
     for paper in papers:
         total += paper["citations"]
@@ -51,6 +72,10 @@ def group_by_year(papers: list) -> dict:
     return dict(sorted(result.items(), reverse=True))
 
 def top_authors(papers: list, n: int) -> list[tuple]:
+    """按出现篇数取前 n 位作者。
+
+    返回 (作者名, 篇数) 元组列表，篇数降序；并列时顺序不保证固定。
+    """
     result = []
     authors = {}
     for paper in papers:
@@ -88,7 +113,11 @@ def shorten_title(title: str, max_len: int = 30) -> str:
     return title
 
 def title_contains(papers: list, keyword: str) -> list:
-    # 返回标题里包含关键字的论文列表
+    """按标题**子串**匹配，不区分大小写、忽略多余空白。
+
+    和 filter_by_tag 的区别：这里只要标题里出现这个词就算命中，
+    keyword 可以只占某个单词的一部分。返回的是论文字典列表。
+    """
     result = []
     for paper in papers:
         if normalize_title(keyword) in normalize_title(paper["title"]):
@@ -110,7 +139,11 @@ def citations_by_tag(papers: list) -> dict:
     return result
 
 def find_paper(papers: list, title: str) -> dict | None:
-    # 按标题找一篇论文，找不到时返回None，不返回{}
+    """按标题**子串**查找第一篇匹配的论文。
+
+    用 normalize_title 归一化后做子串比较，不是精确相等；
+    title 为空串或 papers 为空时返回 None（不是空字典）。
+    """
     if len(papers) == 0 or title == "":
         return None
     for paper in papers:
@@ -127,10 +160,14 @@ def year_range(papers: list) -> tuple | None:
     return (earliest_year, latest_year)
 
 def load_papers_safe(path: str) -> list | None:
-    # 和已有的 load_papers 一样，但文件不存在或者 JSON 格式坏掉时不要崩溃
+    """读 JSON，文件不存在或内容不是合法 JSON 都返回 None。
+
+    注意：调用方无法从返回值区分"文件没有"和"文件坏了"。
+    需要区分时别用它，直接用 load_papers 并自己捕获具体异常。
+    """
     try:
         return load_papers(path)
-    except json.decoder.JSONDecodeError as e1:
+    except json.decoder.JSONDecodeError:
         return None
-    except FileNotFoundError as e2:
+    except FileNotFoundError:
         return None

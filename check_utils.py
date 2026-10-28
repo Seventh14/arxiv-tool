@@ -58,3 +58,23 @@ show("8  safe 文件不存在", lambda: utils.load_papers_safe("nope.json"))
 show("8b safe JSON 坏掉", lambda: utils.load_papers_safe(make_bad_file('{"title": "坏掉的",,}')))
 show("8c safe 空文件", lambda: utils.load_papers_safe(make_bad_file("")))
 show("9  save 不改入参", check_save_keeps_input)
+
+
+def check_load_csv_bom():
+    """带 BOM 的 CSV 也要读得回来。
+
+    先让 save_papers_csv 写一份正常的（无 BOM），再用 utf-8-sig 重写一遍，
+    模拟"被记事本/Excel 保存过"的文件——这一步必须经过磁盘，内存里造不出来。
+    若 load_csv 用 utf-8 读，第一个列名会变成 "\ufefftitle"，取值就 KeyError。
+    """
+    p = [{"title": "带BOM", "authors": ["A"], "year": 2021,
+          "citations": 7, "tags": ["RAG", "security"]}]
+    path = Path(tempfile.gettempdir()) / "check_bom.csv"
+    utils.save_papers_csv(p, str(path))
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text, encoding="utf-8-sig")      # 重写成带 BOM
+    back = utils.load_csv(str(path))
+    return back[0]["citations"], back[0]["tags"]
+
+
+show("10 load_csv 带 BOM", check_load_csv_bom)
