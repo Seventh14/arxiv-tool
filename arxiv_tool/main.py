@@ -1,7 +1,7 @@
-from utils import load_papers, count_papers, filter_by_year, sort_by_citations, filter_by_tag, average_citations, group_by_year, top_authors
-from utils import sort_papers_by_year, unique_tags, papers_per_tag, top_papers
-from utils import normalize_title, shorten_title, title_contains, author_initials
-from utils import citations_by_tag, find_paper, year_range, load_papers_safe
+from arxiv_tool.utils import load_papers, count_papers, filter_by_year, sort_by_citations, filter_by_tag, average_citations, group_by_year, top_authors
+from arxiv_tool.utils import sort_papers_by_year, unique_tags, papers_per_tag, top_papers
+from arxiv_tool.utils import normalize_title, shorten_title, title_contains, author_initials
+from arxiv_tool.utils import citations_by_tag, find_paper, year_range, load_papers_safe
 
 papers = load_papers("papers.json")
 

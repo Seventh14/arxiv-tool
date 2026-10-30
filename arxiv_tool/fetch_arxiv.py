@@ -1,7 +1,7 @@
 import argparse
 import sys
 import json
-from utils import load_papers, filter_by_year, sort_by_citations, filter_by_tag, save_papers_csv
+from arxiv_tool.utils import load_papers, filter_by_year, sort_by_citations, filter_by_tag, save_papers_csv
 
 parser = argparse.ArgumentParser(description="按关键词和年份筛选论文")
 parser.add_argument("--query", required=True, help="关键词，例如RAG")

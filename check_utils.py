@@ -8,7 +8,7 @@
 from pathlib import Path
 import tempfile
 
-import utils
+from arxiv_tool import utils
 
 papers = utils.load_papers(str(Path(__file__).parent / "papers.json"))
 

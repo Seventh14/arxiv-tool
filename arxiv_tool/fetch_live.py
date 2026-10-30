@@ -3,7 +3,7 @@ import requests
 import xml.etree.ElementTree as ET
 import json
 import sys
-from utils import save_papers_csv
+from arxiv_tool.utils import save_papers_csv
 
 
 parser = argparse.ArgumentParser()
