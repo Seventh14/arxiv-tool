@@ -2,7 +2,7 @@ import json
 import csv
 
 
-def load_csv(path: str) -> list:
+def load_csv(path: str) -> list[dict]:
     """读 CSV，并把三列还原成程序内部的类型。
 
     citations / year 转 int，tags 按 "|" 切回列表。
@@ -18,7 +18,7 @@ def load_csv(path: str) -> list:
     return back
 
 
-def save_papers_csv(papers: list, path: str) -> None:
+def save_papers_csv(papers: list[dict], path: str) -> None:
     """把论文列表写成 CSV（有副作用：覆盖写 path）。
 
     authors 和 tags 各自用 "|" 连接成一列；写出的是无 BOM 的 UTF-8。
@@ -34,27 +34,27 @@ def save_papers_csv(papers: list, path: str) -> None:
             row["tags"] = "|".join(paper["tags"])
             w.writerow(row)
 
-def load_papers(path: str) -> list:
+def load_papers(path: str) -> list[dict]:
     with open(path, encoding='utf-8-sig') as f:
         return json.load(f)
 
-def count_papers(papers: list) -> int:
+def count_papers(papers: list[dict]) -> int:
     return len(papers)
 
-def filter_by_year(papers: list, min_year: int) -> list:
+def filter_by_year(papers: list[dict], min_year: int) -> list[dict]:
     return [p for p in papers if p["year"] >= min_year]
 
-def sort_by_citations(papers: list, top_n: int) -> list:
+def sort_by_citations(papers: list[dict], top_n: int) -> list[dict]:
     return top_papers(papers, top_n)
 
-def filter_by_tag(papers: list, tag: str) -> list:
+def filter_by_tag(papers: list[dict], tag: str) -> list[dict]:    # 元素是论文字典
     """按标签**精确**匹配：整个标签相等才算，不做子串匹配。
 
     和 title_contains 的区别：这里 "RAG" 不会命中 "rag-security" 这种标签。
     """
     return [p for p in papers if tag in p["tags"]]
 
-def average_citations(papers: list) -> float:
+def average_citations(papers: list[dict]) -> float:
     """所有论文引用的平均值。
 
     papers 为空时抛 ZeroDivisionError——这是故意的：空列表求平均是调用方的错，
@@ -65,13 +65,13 @@ def average_citations(papers: list) -> float:
         total += paper["citations"]
     return total / len(papers)
 
-def group_by_year(papers: list) -> dict:
+def group_by_year(papers: list[dict]) -> dict[int, int]:    # 键是年份，值是篇数
     result = {}
     for paper in papers:
         result[paper["year"]] = result.get(paper["year"], 0) + 1
     return dict(sorted(result.items(), reverse=True))
 
-def top_authors(papers: list, n: int) -> list[tuple]:
+def top_authors(papers: list[dict], n: int) -> list[tuple[str, int]]:
     """按出现篇数取前 n 位作者。
 
     返回 (作者名, 篇数) 元组列表，篇数降序；并列时顺序不保证固定。
@@ -85,20 +85,20 @@ def top_authors(papers: list, n: int) -> list[tuple]:
         result.append(author_num)
     return result
 
-def sort_papers_by_year(papers: list, descending=False) -> list:
+def sort_papers_by_year(papers: list[dict], descending: bool = False) -> list[dict]:
     return sorted(papers, key=lambda x:x["year"], reverse=descending)
 
-def unique_tags(papers: list) -> list:
+def unique_tags(papers: list[dict]) -> list[str]:          # 元素是字符串
     return sorted({tag for paper in papers for tag in paper["tags"]})
 
-def papers_per_tag(papers: list) -> dict:
+def papers_per_tag(papers: list[dict]) -> dict[str, int]:  # 键是tag，值是每个tag在论文中出现的篇数
     result = {}
     for paper in papers:
         for tag in paper["tags"]:
             result[tag] = result.get(tag, 0) + 1
     return result
 
-def top_papers(papers: list, n: int, by: str = "citations") -> list:
+def top_papers(papers: list[dict], n: int, by: str = "citations") -> list[dict]:
     return sorted(papers, key=lambda x:x[by], reverse=True)[:n]
 
 def normalize_title(title: str) -> str:
@@ -112,7 +112,7 @@ def shorten_title(title: str, max_len: int = 30) -> str:
         return title[:max_len] + "……"
     return title
 
-def title_contains(papers: list, keyword: str) -> list:
+def title_contains(papers: list[dict], keyword: str) -> list[dict]:
     """按标题**子串**匹配，不区分大小写、忽略多余空白。
 
     和 filter_by_tag 的区别：这里只要标题里出现这个词就算命中，
@@ -130,7 +130,7 @@ def author_initials(name: str) -> str:
         return name
     return ".".join(x[0] for x in name.split()).upper() + "."
 
-def citations_by_tag(papers: list) -> dict:
+def citations_by_tag(papers: list[dict]) -> dict[str, int]:     # 键是tag，值是引用数
     # 统计每个标签下论文的总引用数
     result = {}
     for paper in papers:
@@ -138,7 +138,7 @@ def citations_by_tag(papers: list) -> dict:
             result[tag] = result.get(tag, 0) + paper["citations"]
     return result
 
-def find_paper(papers: list, title: str) -> dict | None:
+def find_paper(papers: list[dict], title: str) -> dict | None:
     """按标题**子串**查找第一篇匹配的论文。
 
     用 normalize_title 归一化后做子串比较，不是精确相等；
@@ -151,7 +151,7 @@ def find_paper(papers: list, title: str) -> dict | None:
             return paper
     return None
 
-def year_range(papers: list) -> tuple | None:
+def year_range(papers: list[dict]) -> tuple[int, int] | None:
     # 返回 (最早年份, 最晚年份)，这批数据应该是 (2020, 2025)
     if len(papers) < 1:
         return None
@@ -159,7 +159,7 @@ def year_range(papers: list) -> tuple | None:
     latest_year = max(p["year"] for p in papers)
     return (earliest_year, latest_year)
 
-def load_papers_safe(path: str) -> list | None:
+def load_papers_safe(path: str) -> list[dict] | None:
     """读 JSON，文件不存在或内容不是合法 JSON 都返回 None。
 
     注意：调用方无法从返回值区分"文件没有"和"文件坏了"。

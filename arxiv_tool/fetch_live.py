@@ -4,6 +4,10 @@ import xml.etree.ElementTree as ET
 import json
 import sys
 from arxiv_tool.utils import save_papers_csv
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 parser = argparse.ArgumentParser()
@@ -11,16 +15,21 @@ parser.add_argument("--query", required=True, help="query必填，按照关键�
 parser.add_argument("--max-results", type=int, default=10, help="返回的最大结果数量")
 parser.add_argument("--out", default="arxiv_papers.json", help="写入的文件名")
 parser.add_argument("--export", default=None, help="除了JSON，再存一份CSV")
+parser.add_argument("-v", "--verbose", action="store_true", help="打印调试日志")
 
 def main() -> None:
     args = parser.parse_args()
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.WARNING,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
     try:
         papers = fetch(args.query, args.max_results)  
-    except requests.exceptions.RequestException:
-        print("Requests异常")
+    except requests.exceptions.RequestException as exc:
+        logger.error("请求失败：%s", exc)
         sys.exit(1)
-    except ET.ParseError:
-        print("arxiv 限流或维护")
+    except ET.ParseError as exc:
+        logger.error("arxiv返回的不是有效XML（可能被限流或维护）：%s", exc)
         sys.exit(1)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(papers, f, ensure_ascii=False, indent=2)
@@ -36,6 +45,7 @@ def fetch(query: str, max_results: int) -> list[dict]:
     """
     url = "http://export.arxiv.org/api/query"
     params = {"search_query": query, "max_results": max_results}
+    logger.debug("请求 %s 参数 %s", url, params)
     r = requests.get(url, params=params, timeout=20)
     r.raise_for_status()
     ns = {"a": "http://www.w3.org/2005/Atom", "x": "http://arxiv.org/schemas/atom"}
