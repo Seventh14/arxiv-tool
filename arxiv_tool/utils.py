@@ -1,9 +1,10 @@
 import json
 import csv
 from arxiv_tool.models import Paper
+from dataclasses import asdict
 
 
-def load_csv(path: str) -> list[dict]:
+def load_csv(path: str) -> list[Paper]:
     """读 CSV，并把三列还原成程序内部的类型。
 
     citations / year 转 int，tags 按 "|" 切回列表。
@@ -11,15 +12,15 @@ def load_csv(path: str) -> list[dict]:
     用 utf-8 读会让第一个列名变成 "\ufefftitle"，后面按列名取值全部 KeyError。
     """
     with open(path, encoding="utf-8-sig", newline="") as f:
-        back = list(csv.DictReader(f))
+        back = [Paper(**d) for d in csv.DictReader(f)]
     for row in back:
-        row["citations"] = int(row["citations"])    # 字符串->整型
-        row["year"] = int(row["year"])              # 字符串->整型
-        row["tags"] = row["tags"].split("|")        # 字符串->列表
+        row.citations = int(row.citations)    # 字符串->整型
+        row.year = int(row.year)              # 字符串->整型
+        row.tags = row.tags.split("|")        # 字符串->列表
     return back
 
 
-def save_papers_csv(papers: list[dict], path: str) -> None:
+def save_papers_csv(papers: list[Paper], path: str) -> None:
     """把论文列表写成 CSV（有副作用：覆盖写 path）。
 
     authors 和 tags 各自用 "|" 连接成一列；写出的是无 BOM 的 UTF-8。
@@ -30,9 +31,9 @@ def save_papers_csv(papers: list[dict], path: str) -> None:
         w = csv.DictWriter(f, fieldnames=["title", "authors", "year", "citations", "tags"])
         w.writeheader()
         for paper in papers:
-            row = dict(paper)
-            row["authors"] = "|".join(paper["authors"])
-            row["tags"] = "|".join(paper["tags"])
+            row = asdict(paper)
+            row["authors"] = "|".join(paper.authors)
+            row["tags"] = "|".join(paper.tags)
             w.writerow(row)
 
 def load_papers(path: str) -> list[Paper]:

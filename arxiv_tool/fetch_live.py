@@ -5,7 +5,8 @@ import json
 import sys
 from arxiv_tool.utils import save_papers_csv
 import logging
-
+from arxiv_tool.models import Paper
+from dataclasses import asdict
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +33,17 @@ def main() -> None:
         logger.error("arxiv返回的不是有效XML（可能被限流或维护）：%s", exc)
         sys.exit(1)
     with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(papers, f, ensure_ascii=False, indent=2)
+        json.dump([asdict(p) for p in papers], f, ensure_ascii=False, indent=2)
     if args.export is not None:
         save_papers_csv(papers, args.export)
     print(len(papers))
 
 
 
-def fetch(query: str, max_results: int) -> list[dict]:
+def fetch(query: str, max_results: int) -> list[Paper]:
     """
-    返回的dict有四个键：title，authors，year, tags,其中tags是长度为1的列表
+    从 arXiv 抓论文，返回 Paper 列表。citations 恒为 None（API 不返回引用数）
+    tags是长度为1的列表
     """
     url = "http://export.arxiv.org/api/query"
     params = {"search_query": query, "max_results": max_results}
@@ -52,12 +54,12 @@ def fetch(query: str, max_results: int) -> list[dict]:
     root = ET.fromstring(r.text)
     result = []
     for entry in root.findall("a:entry", ns):
-        result.append({
-            "title": " ".join(entry.find("a:title", ns).text.split()),
-            "authors": [a.find("a:name", ns).text for a in entry.findall("a:author", ns)],
-            "year": int(entry.find("a:published", ns).text[:4]),
-            "tags": [entry.find("x:primary_category", ns).get("term")]
-        })
+        result.append(Paper(
+            title = " ".join(entry.find("a:title", ns).text.split()),
+            authors = [a.find("a:name", ns).text for a in entry.findall("a:author", ns)],
+            year = int(entry.find("a:published", ns).text[:4]),
+            tags = [entry.find("x:primary_category", ns).get("term")]
+        ))
     return result
 
 
