@@ -7,11 +7,16 @@
 """
 from pathlib import Path
 import tempfile
+from arxiv_tool.models import Paper
 
 from arxiv_tool import utils
 
 papers = utils.load_papers(str(Path(__file__).parent / "papers.json"))
 
+
+def title_of(paper):
+    """找不到（None）时返回 None，否则返回标题。"""
+    return paper.title if paper else None
 
 def show(label, fn):
     """跑一个用例，出错就打印异常类型——不要自己 try 掉，报错本身就是信息。"""
@@ -45,13 +50,13 @@ show("1  normalize 多空格", lambda: utils.normalize_title("  Lost in  the   M
 show("1b normalize 含 tab", lambda: utils.normalize_title("Lost\tin the Middle"))
 show("2  shorten 边界", lambda: (utils.shorten_title("a" * 40, 10), len(utils.shorten_title("a" * 40, 10))))
 show("3  title_contains('rag')", lambda: utils.title_contains(papers, "rag"))
-show("3b title_contains 开头匹配", lambda: utils.title_contains([{"title": "RAG 系统"}], "RAG"))
+show("3b title_contains 开头匹配", lambda: utils.title_contains([Paper(title="RAG 系统", authors=[], year=2020, tags=[])], "RAG"))
 show("4  initials 正常", lambda: utils.author_initials("Andrew Lewis"))
 show("4b initials 双空格", lambda: utils.author_initials("Andrew  Lewis"))
 show("4c initials 只有名", lambda: utils.author_initials("Lewis"))
 show("5  citations_by_tag", lambda: utils.citations_by_tag(papers))
-show("6  find_paper 全小写", lambda: (utils.find_paper(papers, "lost in the middle") or {}).get("title"))
-show("6b find_paper 空串", lambda: (utils.find_paper(papers, "") or {}).get("title"))
+show("6  find_paper 全小写", lambda: title_of(utils.find_paper(papers, "lost in the middle")))
+show("6b find_paper 空串", lambda: title_of(utils.find_paper(papers, "")))
 show("7  year_range", lambda: utils.year_range(papers))
 show("7b year_range 空列表", lambda: utils.year_range([]))
 show("8  safe 文件不存在", lambda: utils.load_papers_safe("nope.json"))
