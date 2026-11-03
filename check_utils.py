@@ -38,13 +38,12 @@ def make_bad_file(content: str) -> str:
 def check_save_keeps_input():
     # ① 准备：最小数据。5 个字段一个不能少，
     # 因为 save_papers_csv 的 fieldnames 写死了这 5 列
-    p = [{"title": "T", "authors": ["A", "B"], "year": 2020,
-          "citations": 1, "tags": ["RAG"]}]
+    p = [Paper(title="T", authors=["A", "B"], year=2020, tags=["RAG"], citations=1)]
     # ② 动作：写到临时目录（和你 make_bad_file 一个思路，别写进仓库）
     path = Path(tempfile.gettempdir()) / "check_out.csv"
     utils.save_papers_csv(p, str(path))
     # ③ 判据：入参还是不是原来的形状
-    return type(p[0]["tags"]).__name__, p[0]["tags"]
+    return type(p[0].tags).__name__, p[0].tags
 
 show("1  normalize 多空格", lambda: utils.normalize_title("  Lost in  the   Middle "))
 show("1b normalize 含 tab", lambda: utils.normalize_title("Lost\tin the Middle"))
@@ -72,14 +71,13 @@ def check_load_csv_bom():
     模拟"被记事本/Excel 保存过"的文件——这一步必须经过磁盘，内存里造不出来。
     若 load_csv 用 utf-8 读，第一个列名会变成 "\ufefftitle"，取值就 KeyError。
     """
-    p = [{"title": "带BOM", "authors": ["A"], "year": 2021,
-          "citations": 7, "tags": ["RAG", "security"]}]
+    p = [Paper(title="带BOM", authors=["A"], year=2021, tags=["RAG", "security"], citations=7)]
     path = Path(tempfile.gettempdir()) / "check_bom.csv"
     utils.save_papers_csv(p, str(path))
     text = path.read_text(encoding="utf-8")
     path.write_text(text, encoding="utf-8-sig")      # 重写成带 BOM
     back = utils.load_csv(str(path))
-    return back[0]["citations"], back[0]["tags"]
+    return back[0].citations, back[0].tags
 
 
 show("10 load_csv 带 BOM", check_load_csv_bom)
