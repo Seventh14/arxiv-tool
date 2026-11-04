@@ -7,6 +7,7 @@ from arxiv_tool.utils import save_papers_csv
 import logging
 from arxiv_tool.models import Paper
 from dataclasses import asdict
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -47,21 +48,38 @@ def fetch(query: str, max_results: int) -> list[Paper]:
     """
     url = "http://export.arxiv.org/api/query"
     params = {"search_query": query, "max_results": max_results}
-    logger.debug("请求 %s 参数 %s", url, params)
-    r = requests.get(url, params=params, timeout=20)
-    r.raise_for_status()
-    ns = {"a": "http://www.w3.org/2005/Atom", "x": "http://arxiv.org/schemas/atom"}
-    root = ET.fromstring(r.text)
-    result = []
-    for entry in root.findall("a:entry", ns):
-        result.append(Paper(
-            title = " ".join(entry.find("a:title", ns).text.split()),
-            authors = [a.find("a:name", ns).text for a in entry.findall("a:author", ns)],
-            year = int(entry.find("a:published", ns).text[:4]),
-            tags = [entry.find("x:primary_category", ns).get("term")]
-        ))
-    return result
 
+    for attempt in range(1, 4):
+        try:
+            logger.debug("请求 %s 参数 %s", url, params)
+            r = requests.get(url, params=params, timeout=20)
+            r.raise_for_status()
+            # 解析原样
+            ns = {"a": "http://www.w3.org/2005/Atom", "x": "http://arxiv.org/schemas/atom"}
+            root = ET.fromstring(r.text)
+            result = []
+            for entry in root.findall("a:entry", ns):
+                result.append(Paper(
+                    title = " ".join(entry.find("a:title", ns).text.split()),
+                    authors = [a.find("a:name", ns).text for a in entry.findall("a:author", ns)],
+                    year = int(entry.find("a:published", ns).text[:4]),
+                    tags = [entry.find("x:primary_category", ns).get("term")]
+                ))
+            return result           # 成功立即返回
+        except requests.exceptions.ReadTimeout as exc:
+            logger.debug("第 %s 次失败：%s", attempt, exc)
+            if attempt == 3:
+                raise           # 最后一次，原样输出，保留现场
+            time.sleep(2 ** (attempt - 1))
+        except requests.exceptions.HTTPError as exc:
+            logger.debug("第 %s 次失败：%s", attempt, exc)
+            if exc.response.status_code not in (502, 503, 504, 429):
+                raise
+            if attempt == 3:
+                raise
+            time.sleep(2 ** (attempt - 1))
+
+            
 
 if __name__ == "__main__":
     main()
