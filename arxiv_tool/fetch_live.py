@@ -11,6 +11,7 @@ import time
 from arxiv_tool.errors import (
     ArxivError, ArxivFetchError, ArxivRateLimitError, ArxivDataError, ArxivBugError
 )
+from arxiv_tool.config import API_URL, ATOM_NS, CONNECT_TIMEOUT, MAX_ATTEMPTS
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ def main() -> None:
     )
 
     try:
-        papers = fetch(args.query, args.max_results)  
+        papers = fetch(args.query, args.max_results)
     except ArxivError as exc:
         logger.error("%s", exc)
         logger.error("提示：%s", exc.hint)
@@ -54,58 +55,54 @@ def fetch(query: str, max_results: int) -> list[Paper]:
     从 arXiv 抓论文，返回 Paper 列表。citations 恒为 None（API 不返回引用数）
     tags是长度为1的列表
     """
-    url = "http://export.arxiv.org/api/query"
     params = {"search_query": query, "max_results": max_results}
-
-    for attempt in range(1, 4):
+    for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            logger.debug("请求 %s 参数 %s", url, params)
-            r = requests.get(url, params=params, timeout=20)
+            logger.debug("请求 %s 参数 %s", API_URL, params)
+            r = requests.get(API_URL, params=params, timeout=CONNECT_TIMEOUT)
             r.raise_for_status()
-            # 解析原样
-            ns = {"a": "http://www.w3.org/2005/Atom", "x": "http://arxiv.org/schemas/atom"}
 
             try:
                 root = ET.fromstring(r.text)
             except ET.ParseError as exc:
                 raise ArxivDataError(f"返回的不是有效XML，可能是错误页或限流页：{exc}") from exc
-            
+
             result = []
-            for entry in root.findall("a:entry", ns):
-                title_node = entry.find("a:title", ns)
+            for entry in root.findall("a:entry", ATOM_NS):
+                title_node = entry.find("a:title", ATOM_NS)
                 if title_node is None:
                     raise ArxivDataError("条目缺少title字段，arxiv返回的数据不完整")
-                
+
                 result.append(Paper(
                     title = " ".join(title_node.text.split()),
-                    authors = [a.find("a:name", ns).text for a in entry.findall("a:author", ns)],
-                    year = int(entry.find("a:published", ns).text[:4]),
-                    tags = [entry.find("x:primary_category", ns).get("term")]
+                    authors = [a.find("a:name", ATOM_NS).text for a in entry.findall("a:author", ATOM_NS)],
+                    year = int(entry.find("a:published", ATOM_NS).text[:4]),
+                    tags = [entry.find("x:primary_category", ATOM_NS).get("term")]
                 ))
             return result           # 成功立即返回
         except requests.exceptions.ReadTimeout as exc:
             logger.debug("第 %s 次失败：%s", attempt, exc)
             if attempt == 3:
-                raise ArxivFetchError(f"读取超时（已重试3次）：{exc}") from exc         
+                raise ArxivFetchError(f"读取超时（已尝试3次）：{exc}") from exc
             _backoff(attempt)
         except requests.exceptions.HTTPError as exc:
             code = exc.response.status_code
             logger.debug("第 %s 次失败：%s", attempt, exc)
             if code == 429:
                 if attempt == 3:
-                    raise ArxivRateLimitError(f"被arxiv限流（429，已重试3次）：{exc}") from exc
+                    raise ArxivRateLimitError(f"被arxiv限流（429，已尝试3次）：{exc}") from exc
             elif code in (502, 503, 504):
                 if attempt == 3:
-                    raise ArxivFetchError(f"上游网关故障（HTTP{code}，已重试3次）：{exc}") from exc
+                    raise ArxivFetchError(f"上游网关故障（HTTP{code}，已尝试3次）：{exc}") from exc
             else:
                 raise ArxivBugError(f"请求被拒绝（HTTP{code}，这不是网络问题，是地址或接口变了）") from exc
             _backoff(attempt)
         except requests.exceptions.ConnectTimeout as exc:
             raise ArxivFetchError(
-                f"连接超时，（20s未连上）：{exc}，检查网络或代理是否开着"
+                f"连接超时，（{CONNECT_TIMEOUT}s未连上）：{exc}，检查网络或代理是否开着"
                 ) from exc
 
-            
+
 
 if __name__ == "__main__":
     main()
